@@ -1,5 +1,4 @@
 <Solution>
   <Project Path="MathGrapher.Core/MathGrapher.Core.csproj" />
-  <Project Path="MathGrapher.Tester/MathGrapher.Tester.csproj" />
   <Project Path="MathGrapher/MathGrapher.csproj" />
 </Solution>

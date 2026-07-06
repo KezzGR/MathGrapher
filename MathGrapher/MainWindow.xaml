@@ -4,9 +4,34 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MathGrapher"
+        xmlns:oxy="http://oxyplot.org/wpf"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="Построитель графиков" Height="600" Width="800">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="Формула:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+            <TextBox x:Name="FormulaTextBox" Width="200" VerticalAlignment="Center" Margin="0,0,10,0" Text="sin(x)"/>
+            <TextBlock Text="X от:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+            <TextBox x:Name="XMinTextBox" Width="60" VerticalAlignment="Center" Margin="0,0,10,0" Text="-10"/>
+            <TextBlock Text="до:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+            <TextBox x:Name="XMaxTextBox" Width="60" VerticalAlignment="Center" Margin="0,0,10,0" Text="10"/>
+            <TextBlock Text="Шаг:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+            <TextBox x:Name="StepTextBox" Width="60" VerticalAlignment="Center" Margin="0,0,10,0" Text="0.1"/>
+            <Button x:Name="PlotButton" Content="Построить" Width="80" Click="PlotButton_Click"/>
+        </StackPanel>
+
+        <oxy:PlotView x:Name="PlotView" Grid.Row="1" Model="{Binding PlotModel}"/>
+
+        <StatusBar Grid.Row="2">
+            <StatusBarItem>
+                <TextBlock x:Name="StatusTextBlock" Text="Готово"/>
+            </StatusBarItem>
+        </StatusBar>
     </Grid>
 </Window>

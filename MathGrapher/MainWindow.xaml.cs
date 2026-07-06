@@ -20,5 +20,10 @@ namespace MathGrapher
         {
             InitializeComponent();
         }
+
+        private void PlotButton_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
     }
 }
