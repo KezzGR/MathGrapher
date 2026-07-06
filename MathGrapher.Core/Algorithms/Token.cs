@@ -2,15 +2,32 @@
 
 namespace MathGrapher.Core.Algorithms
 {
+    public enum TokenType
+    {
+        Number,
+        Variable,
+        Operator,
+        Function,
+        LeftParen,
+        RightParen
+    }
+
     public class Token
     {
-        public TokenType Type { get; set; }
-        public string Value { get; set; }
+        public TokenType Type { get; }
+        public object Value { get; }
 
-        public Token(TokenType type, string value)
+        private Token(TokenType type, object value = null)
         {
             Type = type;
             Value = value;
         }
+
+        public static Token Number(double d) => new Token(TokenType.Number, d);
+        public static Token Variable() => new Token(TokenType.Variable, "x");
+        public static Token Operator(char op) => new Token(TokenType.Operator, op);
+        public static Token Function(string name) => new Token(TokenType.Function, name);
+        public static Token LeftParen() => new Token(TokenType.LeftParen);
+        public static Token RightParen() => new Token(TokenType.RightParen);
     }
 }

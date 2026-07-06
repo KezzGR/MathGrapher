@@ -1,22 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Xml.Linq;
 
 namespace MathGrapher.Core.Algorithms
 {
     public static class ExpressionParser
     {
-        private static readonly Dictionary<char, int> _precedance = new Dictionary<char, int>
+        private static readonly Dictionary<char, int> Precedance = new Dictionary<char, int>
         {
             { '+', 1 },
             { '-', 1 },
             { '*', 2 },
             { '/', 2 },
-            { '^', 3}
+            { '^', 3 }
         };
 
-        private static readonly Dictionary<string, Func<double, double>> _functions = new Dictionary<string, Func<double, double>>(StringComparer.OrdinalIgnoreCase)
+        private static readonly Dictionary<string, Func<double, double>> Functions = new Dictionary<string, Func<double, double>>(StringComparer.OrdinalIgnoreCase)
         {
             { "sin", Math.Sin },
             { "cos", Math.Cos },
@@ -26,11 +26,27 @@ namespace MathGrapher.Core.Algorithms
             { "exp", Math.Exp }
         };
 
-        private static readonly Dictionary<string, double> _constants = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
+        private static readonly Dictionary<string, double> Constants = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
         {
             { "pi", Math.PI },
             { "e", Math.E },
         };
+
+        public static double Evaluate(string expression, double x)
+        {
+            Queue<object> outputQueue;
+
+            try
+            {
+                outputQueue = ShuntingYard(expression, x);
+            }
+            catch (Exception ex)
+            {
+                throw new ArgumentException($"Ошибка парсинга выражения: {ex.Message}", ex);
+            }
+
+            return EvaluateRPN(outputQueue, x);
+        }
 
         private static Queue<object> ShuntingYard(string expression, double x)
         {
@@ -71,11 +87,11 @@ namespace MathGrapher.Core.Algorithms
                     }
                     i--;
 
-                    if (_constants.TryGetValue(name, out double constantValue))
+                    if (Constants.TryGetValue(name, out double constantValue))
                     {
                         output.Enqueue(constantValue);
                     }
-                    else if (_functions.ContainsKey(name))
+                    else if (Functions.ContainsKey(name))
                     {
                         operators.Push(name);
                     }
@@ -104,19 +120,19 @@ namespace MathGrapher.Core.Algorithms
                         output.Enqueue(operators.Pop());
                     }
                 }
-                else if (_precedance.ContainsKey(c))
+                else if (Precedance.ContainsKey(c))
                 {
-                    if (c == '-' && (i == 0 || expression[i - 1] == '(' || _precedance.ContainsKey(expression[i - 1])))
+                    if (c == '-' && (i == 0 || expression[i - 1] == '(' || Precedance.ContainsKey(expression[i - 1])))
                     {
                         output.Enqueue(-1.0);
                         operators.Push('*');
                     }
                     else
                     {
-                        while (operators.Count > 0 && operators.Peek() is char op && _precedance.ContainsKey(op))
+                        while (operators.Count > 0 && operators.Peek() is char op && Precedance.ContainsKey(op))
                         {
-                            var currentPrec = _precedance[c];
-                            var stackPrec = _precedance[op];
+                            var currentPrec = Precedance[c];
+                            var stackPrec = Precedance[op];
 
                             if ((c != '^' && stackPrec >= currentPrec) || (c == '^' && stackPrec > currentPrec))
                             {
@@ -178,7 +194,7 @@ namespace MathGrapher.Core.Algorithms
                 else if (token is string funcName)
                 {
                     var arg = stack.Pop();
-                    var func = _functions[funcName];
+                    var func = Functions[funcName];
                     stack.Push(func(arg));
                 }
                 else
