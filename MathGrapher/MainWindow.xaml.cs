@@ -6,6 +6,8 @@ using OxyPlot;
 using OxyPlot.Series;
 using OxyPlot.Axes;
 using MathGrapher.Core.Algorithms;
+using MathGrapher.Core.Data;
+using MathGrapher.Core.Models;
 
 namespace MathGrapher
 {
@@ -14,6 +16,7 @@ namespace MathGrapher
         public MainWindow()
         {
             InitializeComponent();
+            Loaded += (s, e) => LoadHistory();
         }
 
         private void PlotButton_Click(object sender, RoutedEventArgs e)
@@ -116,6 +119,42 @@ namespace MathGrapher
             catch
             {
                 StatusTextBlock.Text = $"Готово. Точек: {points.Count}. Площадь не вычислена.";
+            }
+
+            try
+            {
+                HistoryRepository.AddRecord(formula, xMin, xMax, step, area);
+                LoadHistory();
+            }
+            catch (Exception ex)
+            {
+                ShowError($"Ошибка сохранения в базу данных: {ex.Message}");
+            }
+        }
+
+        private void HistoryDataGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (HistoryDataGrid.SelectedItem is GraphRecord record)
+            {
+                FormulaTextBox.Text = record.Expression;
+                XMinTextBox.Text = record.XMin.ToString(CultureInfo.InvariantCulture);
+                XMaxTextBox.Text = record.XMax.ToString(CultureInfo.InvariantCulture);
+                StepTextBox.Text = record.Step.ToString(CultureInfo.InvariantCulture);
+
+                PlotButton_Click(sender, null);
+            }
+        }
+
+        private void LoadHistory()
+        {
+            try
+            {
+                var history = HistoryRepository.GetHistory();
+                HistoryDataGrid.ItemsSource = history;
+            }
+            catch (Exception ex)
+            {
+                ShowError($"Не удалось загрузить историю: {ex.Message}");
             }
         }
 
