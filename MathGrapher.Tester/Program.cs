@@ -1,50 +1,78 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
+﻿using System.Globalization;
 
-namespace MathGrapher.Core.Algorithms
+namespace MathGrapher.Tester
 {
-    public static class ExpressionParser
+    internal class Program
     {
-        private static readonly Dictionary<char, int> Precedance = new Dictionary<char, int>
+        static void Main(string[] args)
         {
-            { '+', 1 },
-            { '-', 1 },
-            { '*', 2 },
-            { '/', 2 },
-            { '^', 3 }
-        };
+            Test("-sin(x)^2 - cos(x)^2", Math.PI/6, 2);
+        }
 
-        private static readonly Dictionary<string, Func<double, double>> Functions = new Dictionary<string, Func<double, double>>(StringComparer.OrdinalIgnoreCase)
+        static void Test(string expr, double x, double expected)
         {
-            { "sin", Math.Sin },
-            { "cos", Math.Cos },
-            { "sqrt", Math.Sqrt },
-            { "abs", Math.Abs },
-            { "log", Math.Log },
-            { "exp", Math.Exp }
-        };
-
-        private static readonly Dictionary<string, double> Constants = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
-        {
-            { "pi", Math.PI },
-            { "e", Math.E }
-        };
-
-        public static double Evaluate(string expression, double x)
-        {
-            Queue<Token> outputQueue;
-
             try
             {
-                outputQueue = ShuntingYard(expression, x);
+                Console.WriteLine($"Тест: {expr}");
+                string debug = ExpressionParser.ToDebugString(expr, x);
+                Console.WriteLine($"  ОПН: {debug}");
+                double result = ExpressionParser.Evaluate(expr, x);
+                if (Math.Abs(result - expected) < 1e-9)
+                    Console.WriteLine($"  [OK] результат = {result}");
+                else
+                    Console.WriteLine($"  [FAIL] ожидалось {expected}, получено {result}");
             }
             catch (Exception ex)
             {
-                throw new ArgumentException($"Ошибка парсинга выражения: {ex.Message}", ex);
+                Console.WriteLine($"  [ERR] {ex.Message}");
             }
+            Console.WriteLine();
+        }
+    }
 
-            return EvaluateRPN(outputQueue);
+    public static class ExpressionParser
+    {
+        private static readonly Dictionary<char, int> Precedence = new Dictionary<char, int>
+        {
+            { '+', 1 }, { '-', 1 }, { '*', 2 }, { '/', 2 }, { '^', 3 }
+        };
+
+        private static readonly Dictionary<string, Func<double, double>> Functions =
+            new Dictionary<string, Func<double, double>>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "sin", Math.Sin }, { "cos", Math.Cos }, { "sqrt", Math.Sqrt },
+            { "abs", Math.Abs }, { "log", Math.Log }, { "exp", Math.Exp }
+        };
+
+        private static readonly Dictionary<string, double> Constants =
+            new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "pi", Math.PI }, { "e", Math.E }
+        };
+
+        public static string ToDebugString(string expression, double x)
+        {
+            var queue = ShuntingYard(expression, x);
+            var items = new List<string>();
+            foreach (var token in queue)
+            {
+                items.Add(token.Type switch
+                {
+                    TokenType.Number => ((double)token.Value).ToString(CultureInfo.InvariantCulture),
+                    TokenType.Operator => ((char)token.Value).ToString(),
+                    TokenType.Function => (string)token.Value,
+                    TokenType.LeftParen => "(",
+                    TokenType.RightParen => ")",
+                    _ => "?"
+                });
+            }
+            return string.Join(" ", items);
+        }
+
+        public static double Evaluate(string expression, double x)
+        {
+            Queue<Token> output = ShuntingYard(expression, x);
+            return EvaluateRPN(output);
         }
 
         private static Queue<Token> ShuntingYard(string expression, double x)
@@ -55,22 +83,15 @@ namespace MathGrapher.Core.Algorithms
             for (int i = 0; i < expression.Length; i++)
             {
                 char c = expression[i];
-
                 if (char.IsWhiteSpace(c)) continue;
 
                 if (char.IsDigit(c) || c == '.')
                 {
-                    string numStr = "";
-
+                    string num = "";
                     while (i < expression.Length && (char.IsDigit(expression[i]) || expression[i] == '.'))
-                    {
-                        numStr += expression[i];
-                        i++;
-                    }
+                        num += expression[i++];
                     i--;
-
-                    double num = double.Parse(numStr, CultureInfo.InvariantCulture);
-                    output.Enqueue(Token.Number(num));
+                    output.Enqueue(Token.Number(double.Parse(num, CultureInfo.InvariantCulture)));
                 }
                 else if (c == 'x')
                 {
@@ -79,26 +100,14 @@ namespace MathGrapher.Core.Algorithms
                 else if (char.IsLetter(c))
                 {
                     string name = "";
-
                     while (i < expression.Length && char.IsLetter(expression[i]))
-                    {
-                        name += expression[i];
-                        i++;
-                    }
+                        name += expression[i++];
                     i--;
-
-                    if (Constants.TryGetValue(name, out double constVal))
-                    {
-                        output.Enqueue(Token.Number(constVal));
-                    }
+                    if (Constants.TryGetValue(name, out double cnst))
+                        output.Enqueue(Token.Number(cnst));
                     else if (Functions.ContainsKey(name))
-                    {
                         operators.Push(Token.Function(name));
-                    }
-                    else
-                    {
-                        throw new Exception($"Неизвестное имя: {name}");
-                    }
+                    else throw new Exception($"Неизвестное имя: {name}");
                 }
                 else if (c == '(')
                 {
@@ -107,22 +116,15 @@ namespace MathGrapher.Core.Algorithms
                 else if (c == ')')
                 {
                     while (operators.Count > 0 && operators.Peek().Type != TokenType.LeftParen)
-                    {
                         output.Enqueue(operators.Pop());
-                    }
-
                     if (operators.Count == 0) throw new Exception("Несогласованные скобки");
-
-                    operators.Pop();
-
+                    operators.Pop(); // '('
                     if (operators.Count > 0 && operators.Peek().Type == TokenType.Function)
-                    {
                         output.Enqueue(operators.Pop());
-                    }
                 }
-                else if (Precedance.ContainsKey(c))
+                else if (Precedence.ContainsKey(c))
                 {
-                    if (c == '-' && (i == 0 || expression[i - 1] == '(' || Precedance.ContainsKey(expression[i - 1])))
+                    if (c == '-' && (i == 0 || expression[i - 1] == '(' || Precedence.ContainsKey(expression[i - 1])))
                     {
                         output.Enqueue(Token.Number(-1.0));
                         operators.Push(Token.Operator('*'));
@@ -131,10 +133,10 @@ namespace MathGrapher.Core.Algorithms
                     {
                         while (operators.Count > 0 && operators.Peek().Type == TokenType.Operator)
                         {
-                            char stackOp = (char)operators.Peek().Value; 
-                            if (Precedance.TryGetValue(stackOp, out int stackPrec))
+                            char stackOp = (char)operators.Peek().Value;
+                            if (Precedence.TryGetValue(stackOp, out int stackPrec))
                             {
-                                int currPrec = Precedance[c];
+                                var currPrec = Precedence[c];
 
                                 if ((c != '^' && stackPrec >= currPrec) || (c == '^' && stackPrec > currPrec))
                                 {
@@ -213,5 +215,32 @@ namespace MathGrapher.Core.Algorithms
 
             return stack.Pop();
         }
+    }
+
+    public enum TokenType
+    {
+        Number,
+        Operator,
+        Function,
+        LeftParen,
+        RightParen
+    }
+
+    public class Token
+    {
+        public TokenType Type { get; }
+        public object Value { get; }
+
+        private Token(TokenType type, object value = null)
+        {
+            Type = type;
+            Value = value;
+        }
+
+        public static Token Number(double d) => new Token(TokenType.Number, d);
+        public static Token Operator(char op) => new Token(TokenType.Operator, op);
+        public static Token Function(string name) => new Token(TokenType.Function, name);
+        public static Token LeftParen() => new Token(TokenType.LeftParen);
+        public static Token RightParen() => new Token(TokenType.RightParen);
     }
 }

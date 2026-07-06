@@ -5,7 +5,6 @@ namespace MathGrapher.Core.Algorithms
     public enum TokenType
     {
         Number,
-        Variable,
         Operator,
         Function,
         LeftParen,
@@ -24,7 +23,6 @@ namespace MathGrapher.Core.Algorithms
         }
 
         public static Token Number(double d) => new Token(TokenType.Number, d);
-        public static Token Variable() => new Token(TokenType.Variable, "x");
         public static Token Operator(char op) => new Token(TokenType.Operator, op);
         public static Token Function(string name) => new Token(TokenType.Function, name);
         public static Token LeftParen() => new Token(TokenType.LeftParen);
